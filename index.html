@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
-  <title>瑞比民宿預約與財務管理系統 V.R260918.01</title>
+  <title>瑞比民宿預約與財務管理系統 V.R260918.02</title>
   
   <!-- 載入 Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
@@ -135,7 +135,7 @@
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      min-width: 1050px;
+      min-width: 1200px; /* 因擴充為 6 房，微調最小寬度 */
     }
     th, td {
       border-right: 1px solid var(--border-color);
@@ -262,7 +262,7 @@
   <div class="top-bar">
     <div class="title">
       🏡 瑞比民宿預約與財務管理系統
-      <span class="version-badge">V.R260918.01</span>
+      <span class="version-badge">V.R260918.02</span>
       <span id="syncStatus" class="status-badge">連線中...</span>
     </div>
   </div>
@@ -300,6 +300,7 @@
             <th id="th-room3" onclick="renameRoom(3)" class="room-quad-th" style="cursor:pointer; color:#1e40af;">201 四人房 ✏️</th>
             <th id="th-room4" onclick="renameRoom(4)" class="room-quad-th" style="cursor:pointer; color:#1e40af;">301 四人房 ✏️</th>
             <th id="th-room5" onclick="renameRoom(5)" class="room-quad-th" style="cursor:pointer; color:#1e40af;">401 四人房 ✏️</th>
+            <th id="th-room6" onclick="renameRoom(6)" class="room-quad-th" style="cursor:pointer; color:#1e40af;">501 四人房 ✏️</th>
             <th class="total-col">當日總計</th>
             <th class="action-col">操作</th>
           </tr>
@@ -308,7 +309,7 @@
         <tfoot>
           <tr style="background:#f1f5f9; font-weight:bold;">
             <td class="freeze-left" style="background:#e2e8f0;">全月總營收</td>
-            <td colspan="5"></td>
+            <td colspan="6"></td>
             <td id="bookingGrandTotal" style="color:#b91c1c; font-size:16px;">0</td>
             <td></td>
           </tr>
@@ -492,7 +493,9 @@
     // ★ 精簡後的 7 大支出項目
     const EXP_CATEGORIES = ['booking佣金', '水費', '電費', '打工薪水', '網路費', '其他支出', '房貸'];
 
-    let roomNames = ['202 雙人房', '302 雙人房', '201 四人房', '301 四人房', '401 四人房'];
+    // ★ 擴充為 6 間房的預設名稱
+    let roomNames = ['202 雙人房', '302 雙人房', '201 四人房', '301 四人房', '401 四人房', '501 四人房'];
+    
     let currentMonthBookings = {};
     let customRowHeights = {}; 
     let currentMonthExpenses = [];
@@ -565,8 +568,15 @@
     // ==========================================
     function listenToRoomSettings() {
       db.collection('settings').doc('rooms').onSnapshot(doc => {
-        if (doc.exists && doc.data().names) roomNames = doc.data().names;
-        for (let i = 1; i <= 5; i++) {
+        if (doc.exists && doc.data().names) {
+            // 如果原本雲端存的是 5 間房，這裡自動擴充第 6 間
+            let namesFromCloud = doc.data().names;
+            if (namesFromCloud.length === 5) {
+                namesFromCloud.push('501 四人房');
+            }
+            roomNames = namesFromCloud;
+        }
+        for (let i = 1; i <= 6; i++) {
           const el = document.getElementById(`th-room${i}`);
           if (el) el.innerText = `${roomNames[i - 1]} ✏️`;
         }
@@ -639,8 +649,8 @@
         tdDate.innerHTML = dateHtml;
         tr.appendChild(tdDate);
 
-        // 房型
-        for (let r = 1; r <= 5; r++) {
+        // 房型 (擴充為 6 間)
+        for (let r = 1; r <= 6; r++) {
           const roomKey = `r${r}`;
           const rData = dayData[roomKey] || { info: '', phone: '', price: '', payee: '未收' };
           const pVal = parseFloat(rData.price) || 0;
@@ -725,7 +735,8 @@
       let hasChanges = false;
       const dataToSave = { month: monthPickerVal };
 
-      for (let r = 1; r <= 5; r++) {
+      // 擴充為 6 間
+      for (let r = 1; r <= 6; r++) {
         const roomKey = `r${r}`;
         const rData = currentMonthBookings[dateKey][roomKey] || { info: '', phone: '', price: '', payee: '未收' };
         
@@ -775,7 +786,7 @@
           currentMonthBookings[date][room][field] = val;
 
           let rowSum = 0;
-          for (let r = 1; r <= 5; r++) {
+          for (let r = 1; r <= 6; r++) {
             rowSum += parseFloat(currentMonthBookings[date][`r${r}`]?.price) || 0;
           }
           const tCell = document.getElementById(`total-${date}`);
@@ -805,7 +816,7 @@
       let payees = { '已收': 0, '未收': 0 };
 
       for (let date in currentMonthBookings) {
-        for (let r = 1; r <= 5; r++) {
+        for (let r = 1; r <= 6; r++) {
           const rData = currentMonthBookings[date][`r${r}`];
           if (rData) {
             const p = parseFloat(rData.price) || 0;
@@ -1019,7 +1030,8 @@
       // 計算當月【所有訂單營收總計】
       let totalCollection = 0;
       for (let date in expenseTabBookings) {
-        for (let r = 1; r <= 5; r++) {
+        // 擴充為 6 間
+        for (let r = 1; r <= 6; r++) {
            const rData = expenseTabBookings[date][`r${r}`];
            if (rData && rData.price) {
               totalCollection += parseFloat(rData.price) || 0;
@@ -1174,7 +1186,8 @@
         bookingSnapshot.forEach(doc => {
           const date = doc.id;
           const data = doc.data();
-          for (let r = 1; r <= 5; r++) {
+          // 擴充為 6 間
+          for (let r = 1; r <= 6; r++) {
             const roomKey = `r${r}`;
             const roomName = roomNames[r - 1] || `房間 ${r}`;
             const rData = data[roomKey];
@@ -1199,7 +1212,7 @@
         const wsExpenses = XLSX.utils.aoa_to_sheet(expRows);
         XLSX.utils.book_append_sheet(wb, wsExpenses, "支出明細");
 
-        const fileName = `瑞比民宿管理資料_VR260918.01_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        const fileName = `瑞比民宿管理資料_VR260918.02_${new Date().toISOString().slice(0, 10)}.xlsx`;
         XLSX.writeFile(wb, fileName);
         setSyncStatus('雲端已同步', 'synced');
       } catch (err) {
